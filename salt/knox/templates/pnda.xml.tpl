@@ -124,4 +124,9 @@
         
     </service>
 
+    <service>
+        <role>pnda-deployment-manager</role>
+        <url>http://deployment_manager_internal.service.{{ pnda_domain }}:5000</url>
+    </service>
+
 </topology>

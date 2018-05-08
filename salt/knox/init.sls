@@ -10,6 +10,7 @@
 {% set namenode_host = salt['pnda.get_hosts_by_role']('HDFS', 'NAMENODE')[0] %}
 {% set oozie_node = salt['pnda.get_hosts_by_role']('OOZIE', 'OOZIE_SERVER')[0] %}
 {% set hive_node = salt['pnda.get_hosts_by_role']('HIVE', 'HIVE_SERVER')[0] %}
+{% set pnda_domain = pillar['consul']['data_center'] + '.' + pillar['consul']['domain'] %}
 {% set release_directory = pillar['pnda']['homedir'] %}
 
 include:
@@ -93,8 +94,30 @@ knox-set-configuration:
       namenode_host: {{ namenode_host }}
       oozie_node: {{ oozie_node }}
       hive_node: {{ hive_node }}
+      pnda_domain: {{ pnda_domain }}
     - require:
       - cmd: knox-init-authentication
+
+{% set knox_dm_dir = release_directory + '/knox/data/services/pnda-deployment-manager/1.0.0/' %}
+
+knox-dm_dir:
+  file.directory:
+    - name: {{ knox_dm_dir }}
+    - makedirs: True
+
+knox-dm_service:
+  file.managed:
+    - name: {{ knox_dm_dir }}/service.xml
+    - source: salt://knox/files/dm_service.xml
+    - require:
+      - file: knox-dm_dir
+
+knox-dm_rewrite:
+  file.managed:
+    - name: {{ knox_dm_dir }}/rewrite.xml
+    - source: salt://knox/files/dm_rewrite.xml
+    - require:
+      - file: knox-dm_dir
 
 knox-start-gateway:
   cmd.run:
@@ -102,3 +125,5 @@ knox-start-gateway:
     - user: knox
     - require:
       - cmd: knox-init-authentication
+      - file: knox-dm_service
+      - file: knox-dm_rewrite
